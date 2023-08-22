@@ -79,19 +79,19 @@ List of software modules written for this project (available in the Project fold
 How to Run The Code
 ================
 
-'ssh -X thoth' (enter password)
-'module load python/v3'
-'conda activate rlscore'
-Navigate to main 'Project' folder
-'python3 <name of module>'
+- 'ssh -X thoth' (enter password)
+- 'module load python/v3'
+- 'conda activate rlscore'
+- Navigate to main 'Project' folder
+- 'python3 <name of module>'
 
 
 
 Citations
 ==============
 
-*RLScore library Github page: https://github.com/aatapa/RLScore/tree/master
-*mahtaz's SimBoost Github page: https://github.com/mahtaz/Simboost-ML_project-
+- RLScore library Github page: https://github.com/aatapa/RLScore/tree/master
+- mahtaz's SimBoost Github page: https://github.com/mahtaz/Simboost-ML_project-
 
 
 Credits
