@@ -51,6 +51,7 @@ A C-compiler was also installed for RLScore (to build Cython extensions)
 
 Software Modules
 ==================
+
 List of software modules written for this project (available in the Project folder):
 - Generate Drug Similarity File.py
 - Generate Target Similarity File.py
@@ -66,13 +67,9 @@ List of software modules written for this project (available in the Project fold
 - SimBoost (GPCR - 595 x 31).py
 - SimBoost (GPCR - 746 x 12).py
 - SimBoost (GPCR - 878 x 56).py
-- TwoStepRLS (Davis) - Gaussian.py
 - TwoStepRLS (Davis).py
-- TwoStepRLS (GPCR - 595 x 31) - Gaussian.py
 - TwoStepRLS (GPCR - 595 x 31).py
-- TwoStepRLS (GPCR - 746 x 12) - Gaussian.py
 - TwoStepRLS (GPCR - 746 x 12).py
-- TwoStepRLS (GPCR - 878 x 56) - Gaussian.py
 - TwoStepRLS (GPCR - 878 x 56).py
 
 
