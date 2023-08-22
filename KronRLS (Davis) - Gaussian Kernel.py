@@ -189,11 +189,11 @@ def train_model(learner, drugs_test, targets_test, bindings_test, scenario):
             P = learner.predict(drugs_test, targets_test)
         perf = cindex(bindings_test_flat, P)
         if perf>best_cindex:
-            # best_regparam=log_regparam
+            best_regparam=log_regparam
             best_cindex=perf
             best_predict = P
         # print("regparam 2**%d, cindex %f" % (log_regparam, perf))
-    # print("best regparam 2**%d with cindex %f" % (best_regparam, best_cindex))
+    print("best regparam 2**%d with cindex %f" % (best_regparam, best_cindex))
 
     y_true = bindings_test_flat
     y_pred = best_predict
