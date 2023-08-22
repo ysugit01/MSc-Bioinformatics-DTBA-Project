@@ -1,5 +1,5 @@
 filepath = 'data/Davis/'
-conf_matrx_threshold = 7
+conf_matrx_threshold = 6.5
 
 # Read this article:
 # https://www.frontiersin.org/articles/10.3389/fchem.2019.00782/full
@@ -45,6 +45,7 @@ conf_matrx_threshold = 7
 import numpy as np
 import pandas as pd
 from rlscore.learner import TwoStepRLS
+from rlscore.kernel import GaussianKernel
 from rlscore.measure import cindex
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import mean_squared_error
@@ -103,58 +104,70 @@ def load_data():
 
 
 # http://staff.cs.utu.fi/~aatapa/software/RLScore/tutorial_kronecker.html#tutorial-2-twosteprls-cross-validation-with-bipartite-network
-def train_model(learner, drugs_train, targets_train, bindings_train, scenario):
-    bindings_train_flat = bindings_train.values.ravel(order='F')
-    m = drugs_train.shape[0]
-    n = targets_train.shape[0]
-    best_regparam = None
+def train_model(sim_drugs, sim_targets, bindings, scenario):
+    bindings_flat = bindings.values.ravel(order='F')
+    best_gamma_param1 = None
+    best_gamma_param2 = None
+    best_regparam1 = None
+    best_regparam2 = None
     best_predict = None
     best_cindex = 0.0
+    gamma_params1 = range(-10, 1)
+    gamma_params2 = range(-10, 1)
     log_regparams1 = range(-20, 15)
     log_regparams2 = range(-20, 15)
 
-    for log_regparam1 in log_regparams1:
-        for log_regparam2 in log_regparams2:
-            learner.solve(2. ** log_regparam1, 2. ** log_regparam2)
-            # Computes the in-sample leave-one-out cross-validation prediction
-            # http://staff.cs.utu.fi/~aatapa/software/RLScore/modules/kron_rls.html
-            if scenario == 'A':
-                # Leave-pair-out cross-validation. On each round of CV, one (drug,target) pair is left out of the training set as test pair.
-                P = learner.in_sample_loo()
-            elif scenario == 'B':
-                # Leave-drug-out cross-validation. On each CV round, a single holdout drug is left out, and all (drug, target) pairs this drug
-                # belongs to used as the test fold.
-                P = learner.leave_x1_out()
-            elif scenario == 'C':
-                # Leave-target-out cross-validation. On each CV round, a single holdout target is left out, and all (drug, target) pairs this
-                # target belongs to used as the test fold.
-                P = learner.leave_x2_out()
-            elif scenario == 'D':
-                # Out-of-sample leave-pair-out. On each CV round, a single (drug, target) pair is used as test pair (similar to setting A).
-                # However, all pairs where either the drug or the target appears, are left out of the training set
-                P = learner.out_of_sample_loo()
-            else:
-                print("Invalid scenario selected!")
-                exit()
-            perf = cindex(bindings_train_flat, P)
-            if perf > best_cindex:
-                best_regparam1, best_regparam2 = log_regparam1, log_regparam2
-                best_cindex = perf
-                best_predict = P
-    print("best regparam1 2**%d, regparam2 2**%d with cindex %f" % (best_regparam1, best_regparam2, best_cindex))
+    for gamma_param1 in gamma_params1:
+        for gamma_param2 in gamma_params2:
+            kernel1 = GaussianKernel(sim_drugs, gamma=10**gamma_param1)
+            kernel2 = GaussianKernel(sim_targets, gamma=10**gamma_param2)
+            d_kernel = kernel1.getKM(sim_drugs)
+            t_kernel = kernel2.getKM(sim_targets)
+            learner = TwoStepRLS(K1=d_kernel, K2=t_kernel, Y=bindings.to_numpy(), regparam1=1.0, regparam2=1.0)
+
+            for log_regparam1 in log_regparams1:
+                for log_regparam2 in log_regparams2:
+                    learner.solve(2. ** log_regparam1, 2. ** log_regparam2)
+                    # Computes the in-sample leave-one-out cross-validation prediction
+                    # http://staff.cs.utu.fi/~aatapa/software/RLScore/modules/kron_rls.html
+                    if scenario == 'A':
+                        # Leave-pair-out cross-validation. On each round of CV, one (drug,target) pair is left out of the training set as test pair.
+                        P = learner.in_sample_loo()
+                    elif scenario == 'B':
+                        # Leave-drug-out cross-validation. On each CV round, a single holdout drug is left out, and all (drug, target) pairs this drug
+                        # belongs to used as the test fold.
+                        P = learner.leave_x1_out()
+                    elif scenario == 'C':
+                        # Leave-target-out cross-validation. On each CV round, a single holdout target is left out, and all (drug, target) pairs this
+                        # target belongs to used as the test fold.
+                        P = learner.leave_x2_out()
+                    elif scenario == 'D':
+                        # Out-of-sample leave-pair-out. On each CV round, a single (drug, target) pair is used as test pair (similar to setting A).
+                        # However, all pairs where either the drug or the target appears, are left out of the training set
+                        P = learner.out_of_sample_loo()
+                    else:
+                        print("Invalid scenario selected!")
+                        exit()
+                    perf = cindex(bindings_flat, P)
+                    if perf > best_cindex:
+                        best_gamma_param1, best_gamma_param2 = gamma_param1, gamma_param2
+                        best_regparam1, best_regparam2 = log_regparam1, log_regparam2
+                        best_cindex = perf
+                        best_predict = P
+    print("best gamma_param1 %d, best gamma_param2 %d, best regparam1 2**%d, regparam2 2**%d with cindex %f" % (best_gamma_param1, best_gamma_param2, best_regparam1, best_regparam2, best_cindex))
     print("")
 
-    y_true = bindings_train_flat
+    y_true = bindings_flat
     y_pred = best_predict
 
     labels = []
-    for target in bindings_train.columns:
-        for drug in bindings_train.index:
+    for target in bindings.columns:
+        for drug in bindings.index:
             labels.append(str(drug) + "|"+ target)
 
     test_data = pd.DataFrame(y_true, columns=['y_true'], index=labels)
     test_data['y_pred'] = y_pred
-    test_data.to_csv(filepath + 'TwoStepRLS/TwoStepRLS_' + scenario + '_test.csv', sep=',')
+    test_data.to_csv(filepath + 'TwoStepRLS/TwoStepRLS_Gaussian_' + scenario + '_test.csv', sep=',')
 
     return y_true, y_pred
 
@@ -235,7 +248,7 @@ def main():
     # Create histogram with 10 buckets
     plt.hist(bindings.values.ravel(), bins=10)
     plt.title("Distribution of Values in the Dataset")
-    plt.xlabel("pKd (nM)")
+    plt.xlabel("pIC50 (nM)")
     plt.ylabel("Frequency")
     plt.show()
 
@@ -251,8 +264,7 @@ def main():
     print("Scenario A - Leave-one-out cross-validation predictions:")
     print("======================")
     # Leave-pair-out cross-validation. On each round of CV, one (drug,target) pair is left out of the training set as test pair.
-    learner = TwoStepRLS(X1=sim_drugs.to_numpy(), X2=sim_targets.to_numpy(), Y=bindings.to_numpy(), regparam1=1.0, regparam2=1.0)
-    y_true, y_pred = train_model(learner, sim_drugs, sim_targets, bindings, 'A')
+    y_true, y_pred = train_model(sim_drugs, sim_targets, bindings, 'A')
     eval_model(y_true, y_pred, axis, 0)
 
 
@@ -260,8 +272,7 @@ def main():
     print("======================")
     # Leave-drug-out cross-validation. On each CV round, a single holdout drug is left out, and all (drug, target) pairs this drug
     # belongs to used as the test fold.
-    learner = TwoStepRLS(X1=sim_drugs.to_numpy(), X2=sim_targets.to_numpy(), Y=bindings.to_numpy(), regparam1=1.0, regparam2=1.0)
-    y_true, y_pred = train_model(learner, sim_drugs, sim_targets, bindings, 'B')
+    y_true, y_pred = train_model(sim_drugs, sim_targets, bindings, 'B')
     eval_model(y_true, y_pred, axis, 1)
 
 
@@ -269,8 +280,7 @@ def main():
     print("======================")
     # Leave-target-out cross-validation. On each CV round, a single holdout target is left out, and all (drug, target) pairs this
     # target belongs to used as the test fold.
-    learner = TwoStepRLS(X1=sim_drugs.to_numpy(), X2=sim_targets.to_numpy(), Y=bindings.to_numpy(), regparam1=1.0, regparam2=1.0)
-    y_true, y_pred = train_model(learner, sim_drugs, sim_targets, bindings, 'C')
+    y_true, y_pred = train_model(sim_drugs, sim_targets, bindings, 'C')
     eval_model(y_true, y_pred, axis, 2)
 
 
@@ -278,8 +288,7 @@ def main():
     print("======================")
     # Out-of-sample leave-pair-out. On each CV round, a single (drug, target) pair is used as test pair (similar to setting A).
     # However, all pairs where either the drug or the target appears, are left out of the training set
-    learner = TwoStepRLS(X1=sim_drugs.to_numpy(), X2=sim_targets.to_numpy(), Y=bindings.to_numpy(), regparam1=1.0, regparam2=1.0)
-    y_true, y_pred = train_model(learner, sim_drugs, sim_targets, bindings, 'D')
+    y_true, y_pred = train_model(sim_drugs, sim_targets, bindings, 'D')
     eval_model(y_true, y_pred, axis, 3)
 
     figure.tight_layout()
@@ -288,7 +297,7 @@ def main():
     # Create heatmap of the bindings data
     plt.figure(figsize=(10, 5))
     sn.set()
-    plt.title("pKd Values (nM)")
+    plt.title("pIC50 Values (nM)")
     heatmap(bindings)
     plt.show()
 

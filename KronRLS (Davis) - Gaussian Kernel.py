@@ -205,7 +205,7 @@ def train_model(learner, drugs_test, targets_test, bindings_test, scenario):
 
     test_data = pd.DataFrame(y_true, columns=['y_true'], index=labels)
     test_data['y_pred'] = y_pred
-    test_data.to_csv(filepath + 'KronRLS/KronRLS_' + scenario + '_test.csv', sep=',')
+    test_data.to_csv(filepath + 'KronRLS/KronRLS_Gaussian_' + scenario + '_test.csv', sep=',')
 
     return y_true, y_pred
 
