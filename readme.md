@@ -80,7 +80,7 @@ How to Run The Code
 - 'module load python/v3'
 - 'conda activate rlscore'
 - Navigate to main 'Project' folder
-- 'python3 <name of module>'
+- 'python3 \<name of module\>'
 
 
 
