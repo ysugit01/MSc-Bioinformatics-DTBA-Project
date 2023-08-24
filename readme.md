@@ -94,5 +94,5 @@ Citations
 Credits
 =======
 
-- Mark Williams: Thank you for all your help, support and understanding to deliver this complex project whilst I was very ill with Covid and post-Covid over 6 months from the beginning of 2023.
+- Dr Mark Williams: Thank you for all your help, support and understanding to deliver this complex project whilst I was very ill with Covid and post-Covid over 6 months from the beginning of 2023.
 - Dr David Houldershaw: Special thanks for helping me with installations of various libraries on the university sever when my PC broke down a week before the deadline.
